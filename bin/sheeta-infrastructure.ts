@@ -16,7 +16,7 @@ var lclCfg = JSON.parse(fs.readFileSync('config/local.json', 'utf-8')) as LocalC
 const envSheeta = { region: "us-east-2", account: lclCfg.account };
 
 const app = new cdk.App();
-new SheetaInfrastructureStack(app, "SheetaInfrastructureStack", {
+new SheetaInfrastructureStack(app, "Sheeta2", {
   env: envSheeta,
   ...projectConfig
 });

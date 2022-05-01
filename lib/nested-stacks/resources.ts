@@ -12,7 +12,7 @@ export interface ResourceProps extends cdk.NestedStackProps {
   projectName: string,
   domainName: string,
   certName: string,
-  subDomain?: string,
+  repoName: string
 }
 
 export class NestedResourceStack extends cdk.NestedStack {
@@ -46,37 +46,44 @@ export class NestedResourceStack extends cdk.NestedStack {
       this.hz = top;
     }
 
-    if (props.subDomain) {
-      fqdn = `${props.subDomain}.${props.domainName}`
+    // if (props.subDomain) {
+    //   fqdn = `${props.subDomain}.${props.domainName}`
 
-      subDomainHz = new r53.PublicHostedZone(this, "HostedZoneDev", {
-        zoneName: fqdn,
-      });
-      // todo::This can probably be a downstream lookup
-      new r53.NsRecord(this, "NsForParentDomain", {
-        zone: top,
-        recordName: fqdn,
-        values: subDomainHz.hostedZoneNameServers!, // exclamation is like, hey it might be null but no: https://stackoverflow.com/questions/54496398/typescript-type-string-undefined-is-not-assignable-to-type-string
-      });
-    }
+    //   subDomainHz = new r53.PublicHostedZone(this, "HostedZoneDev", {
+    //     zoneName: fqdn,
+    //   });
+    //   // todo::This can probably be a downstream lookup
+    //   new r53.NsRecord(this, "NsForParentDomain", {
+    //     zone: top,
+    //     recordName: fqdn,
+    //     values: subDomainHz.hostedZoneNameServers!, // exclamation is like, hey it might be null but no: https://stackoverflow.com/questions/54496398/typescript-type-string-undefined-is-not-assignable-to-type-string
+    //   });
+    // }
 
-    if (subDomainHz) {
-      this.hz = subDomainHz;
-    }
+    // if (subDomainHz) {
+    //   this.hz = subDomainHz;
+    // }
 
 
-    this.repo = ecr.Repository.fromRepositoryName(this, `Repository-${props.domainName}`, props.domainName)
+    this.repo = ecr.Repository.fromRepositoryName(this, `Repository-${props.domainName}`, props.repoName)
     // TODO::If there is no repo use this:
     // this.repo = new ecr.Repository(this, `Repository-${props.projectName}-${tagger()}`, { repositoryName: fqdn });
 
     this.cert = new acm.Certificate(this, 'Certificate', {
-      domainName: `*.${props.domainName}`,
+      domainName: `${props.domainName}`,
       validation: acm.CertificateValidation.fromDns(top),
-    });
+    })
+    // });
+    // this.cert = new acm.Certificate(this, 'Certificate', {
+    //   domainName: `${props.domainName}`,
+    //   subjectAlternativeNames: ['*.example.com'],
+    //   validation: acm.CertificateValidation.fromDnsMultiZone({
+    //     '*.example.com': this.hz,
+    //   }),
+    // });
 
-  }
-};
-
+  };
+}
 // For generating gibberish on ResourceIDs
 function tagger(): string {
   let r = (Math.random() + 1).toString(36).substring(7);

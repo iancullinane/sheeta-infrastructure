@@ -22,6 +22,7 @@ export interface ConfigProps extends cdk.StackProps {
   subDomain: string,
   certName: string,
   account: string,
+  repoName: string,
 }
 
 export class SheetaInfrastructureStack extends Stack {
@@ -41,7 +42,7 @@ export class SheetaInfrastructureStack extends Stack {
     );
 
     const dn = new apigwv2.DomainName(this, "DN", {
-      domainName: `*.${props.domainName}`,
+      domainName: `${props.domainName}`,
       certificate: acm.Certificate.fromCertificateArn(this, "cert", cert.certificateArn),
     });
 
@@ -116,7 +117,6 @@ export class SheetaInfrastructureStack extends Stack {
         domainName: dn,
       },
     });
-    console.log(api.url);
 
     api.addRoutes({
       path: "/v1/{proxy+}",
