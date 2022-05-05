@@ -126,8 +126,6 @@ export class SheetaInfrastructureStack extends Stack {
 
     // //
     // // ------ Networking
-    console.log("Add A record to");
-    console.log(hz.zoneName);
     new r53.ARecord(this, `ARecord-${props.subDomain}.${props.domainName}.`, {
       zone: hz,
       target: r53.RecordTarget.fromAlias(

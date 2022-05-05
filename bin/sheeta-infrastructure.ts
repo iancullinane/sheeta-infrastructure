@@ -8,15 +8,16 @@ import { SheetaInfrastructureStack } from "../lib/sheeta-infrastructure-stack";
 
 interface LocalConfig {
   account: string
+  region: string
 }
 
-var projectConfig = JSON.parse(fs.readFileSync('config/base.json', 'utf-8')) as ConfigProps;
 var lclCfg = JSON.parse(fs.readFileSync('config/local.json', 'utf-8')) as LocalConfig;
+var projectConfig = JSON.parse(fs.readFileSync('config/base.json', 'utf-8')) as ConfigProps;
 
-const envSheeta = { region: "us-east-2", account: lclCfg.account };
+const envSheeta = { region: lclCfg.region, account: lclCfg.account };
 
 const app = new cdk.App();
-new SheetaInfrastructureStack(app, "Sheeta2", {
+new SheetaInfrastructureStack(app, "Sheeta", {
   env: envSheeta,
   ...projectConfig
 });
