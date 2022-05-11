@@ -21,4 +21,4 @@ new SheetaInfrastructureStack(app, "Sheeta", {
   env: envSheeta,
   ...projectConfig
 });
-app.synth;
+// app.synth;

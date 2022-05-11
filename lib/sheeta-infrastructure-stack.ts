@@ -61,25 +61,40 @@ export class SheetaInfrastructureStack extends Stack {
     );
     sheetaLambdaRole.grant(sheetaLambdaRole, "ssm:Describe*", "ssm:GetParam*");
     sheetaLambdaRole.attachInlinePolicy(
+      new iam.Policy(this, "client-policies", {
+        statements: [
+          new iam.PolicyStatement({
+            actions: ["cloudformation:*"],
+            resources: ["*"],
+          }),
+          new iam.PolicyStatement({
+            actions: ["ec2:*"],
+            resources: ["*"],
+            conditions: {
+              'ForAllValues:StringEquals': {
+                'aws:TagKeys': ["sheeta"]
+              }
+            }
+          }),
+          new iam.PolicyStatement({
+            actions: ["s3:*"],
+            resources: ["*"],
+            conditions: {
+              'ForAllValues:StringEquals': {
+                'aws:TagKeys': ["sheeta"]
+              }
+            }
+          }),
+        ]
+      })
+    )
+    sheetaLambdaRole.attachInlinePolicy(
       new iam.Policy(this, "ssm-get-policy", {
         statements: [
           new iam.PolicyStatement({
             actions: ["ssm:Describe*", "ssm:GetParam*"],
             resources: [`arn:aws:ssm:us-east-2:${props.account}:parameter/*`],
           }),
-          // placeholder but also example if bot were to manpiulate r53
-          // new iam.PolicyStatement({
-          //   actions: [
-          //     "route53:GetHostedZone",
-          //     "route53:ListResourceRecordSets",
-          //     "route53:ListHostedZones",
-          //     "route53:ChangeResourceRecordSets",
-          //     "route53:ListResourceRecordSets",
-          //     "route53:GetHostedZoneCount",
-          //     "route53:ListHostedZonesByName"
-          //   ],
-          //   resources: TODO::...
-          // }),
         ],
       })
     );
@@ -98,6 +113,7 @@ export class SheetaInfrastructureStack extends Stack {
 
     const sheetaLambda = new lambda.DockerImageFunction(this, `ECRFunction-${props.domainName}`, {
       role: sheetaLambdaRole,
+      timeout: cdk.Duration.minutes(5),
       environment: {
         CodeVersionString: this.sha,
       },
@@ -112,6 +128,8 @@ export class SheetaInfrastructureStack extends Stack {
     );
 
     // requires the apigateway created above
+    // uses the experimental branch, pins to its own version outsid of cdk lib
+    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-apigatewayv2-alpha-readme.html
     const api = new apigwv2.HttpApi(this, "Sheeta", {
       defaultDomainMapping: {
         domainName: dn,
