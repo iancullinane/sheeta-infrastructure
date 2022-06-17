@@ -11,8 +11,7 @@ import * as r53 from "aws-cdk-lib/aws-route53";
 import * as targets from "aws-cdk-lib/aws-route53-targets";
 import { v4 as uuidv4 } from "uuid";
 
-import { NestedResourceStack } from "./nested-stacks/resources";
-// example with go bundling
+// TODO::example with go bundling
 // https://faun.pub/golang-build-and-deploy-an-aws-lambda-using-cdk-b484fe99304b
 
 export interface ConfigProps extends cdk.StackProps {
@@ -28,22 +27,39 @@ export interface ConfigProps extends cdk.StackProps {
 export class SheetaInfrastructureStack extends Stack {
 
   declare sha: string;
+  hz: r53.IHostedZone;
+  repo: ecr.IRepository;
+  cert: acm.ICertificate;
 
   constructor(scope: Construct, id: string, props: ConfigProps) {
     super(scope, id, props);
 
     this.sha = props.appSha;
 
-    // This will return a NestedStack with various resources, using a Nested
-    // Stack lets us change the underlying resources and re-deploy into
-    // another environment
-    const { cert, hz, repo } = new NestedResourceStack(
-      this, "resource-stack", { ...props }
-    );
 
+    // Find the top level domain only, we may (or may not) attach a new
+    // subdomain in the next stanza
+    // TODO::Double check logic here when there is no zone available
+    let top = r53.HostedZone.fromLookup(this, `Zone-${props.domainName}`, { domainName: props.domainName });
+    if (top.hostedZoneId === undefined) {
+      // No top level zone, build one
+      // props: https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_route53.HostedZoneProps.html
+      this.hz = new r53.HostedZone(this, "hosted-zone" + props.domainName, {
+        zoneName: props.domainName,
+      });
+    } else {
+      this.hz = top;
+    }
+
+    this.repo = ecr.Repository.fromRepositoryName(this, `Repository-${props.domainName}`, props.repoName)
+
+    this.cert = new acm.Certificate(this, 'Certificate', {
+      domainName: `${props.domainName}`,
+      validation: acm.CertificateValidation.fromDns(top),
+    })
     const dn = new apigwv2.DomainName(this, "DN", {
       domainName: `${props.domainName}`,
-      certificate: acm.Certificate.fromCertificateArn(this, "cert", cert.certificateArn),
+      certificate: acm.Certificate.fromCertificateArn(this, "cert", this.cert.certificateArn),
     });
 
     //
@@ -117,7 +133,7 @@ export class SheetaInfrastructureStack extends Stack {
       environment: {
         CodeVersionString: this.sha,
       },
-      code: lambda.DockerImageCode.fromEcr(repo, {
+      code: lambda.DockerImageCode.fromEcr(this.repo, {
         tag: this.sha,
       }),
     });
@@ -145,7 +161,7 @@ export class SheetaInfrastructureStack extends Stack {
     // //
     // // ------ Networking
     new r53.ARecord(this, `ARecord-${props.subDomain}.${props.domainName}.`, {
-      zone: hz,
+      zone: this.hz,
       target: r53.RecordTarget.fromAlias(
         new targets.ApiGatewayv2DomainProperties(
           dn.regionalDomainName,

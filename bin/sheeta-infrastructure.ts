@@ -17,6 +17,8 @@ var projectConfig = JSON.parse(fs.readFileSync('config/base.json', 'utf-8')) as 
 const envSheeta = { region: lclCfg.region, account: lclCfg.account };
 
 const app = new cdk.App();
+
+
 new SheetaInfrastructureStack(app, "Sheeta", {
   env: envSheeta,
   ...projectConfig
